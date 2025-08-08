@@ -2,18 +2,14 @@ import pandas as pd
 import re
 from datetime import datetime
 
-# ----------------------------------------
-# Helper: Calculate Age from DOB
-# ----------------------------------------
+
 def calculate_age(dob):
     if pd.isnull(dob):
         return None
     today = datetime.today()
     return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
 
-# ----------------------------------------
-# Clean Patient Data
-# ----------------------------------------
+
 def clean_patients(df: pd.DataFrame, column_map: dict) -> pd.DataFrame:
     df = df.rename(columns=column_map)
     df['FirstName'] = df['FirstName'].str.title()
@@ -23,17 +19,13 @@ def clean_patients(df: pd.DataFrame, column_map: dict) -> pd.DataFrame:
     df['Age'] = df['DOB'].apply(calculate_age)
     return df
 
-# ----------------------------------------
-# Clean Provider Data
-# ----------------------------------------
+
 def clean_providers(df: pd.DataFrame, column_map: dict) -> pd.DataFrame:
     df = df.rename(columns=column_map)
     df['FullName'] = df['FirstName'].str.title() + ' ' + df['LastName'].str.title()
     return df[['ProviderID', 'FullName', 'Specialization', 'DeptID', 'NPI']]
 
-# ----------------------------------------
-# Clean Transactions Data
-# ----------------------------------------
+
 def clean_transactions(df: pd.DataFrame, column_map: dict) -> pd.DataFrame:
     df = df.rename(columns=column_map)
     date_fields = ['VisitDate', 'ServiceDate', 'PaidDate', 'InsertDate', 'ModifiedDate']
@@ -42,17 +34,13 @@ def clean_transactions(df: pd.DataFrame, column_map: dict) -> pd.DataFrame:
             df[col] = pd.to_datetime(df[col], errors='coerce')
     return df
 
-# ----------------------------------------
-# Clean Departments Data
-# ----------------------------------------
+
 def clean_departments(df: pd.DataFrame, column_map: dict) -> pd.DataFrame:
     df = df.rename(columns=column_map)
     df['Name'] = df['Name'].str.title()
     return df
 
-# ----------------------------------------
-# Clean Encounters Data
-# ----------------------------------------
+
 def clean_encounters(df: pd.DataFrame, column_map: dict) -> pd.DataFrame:
     df = df.rename(columns=column_map)
     date_fields = ['EncounterDate', 'InsertedDate', 'ModifiedDate']
@@ -61,9 +49,7 @@ def clean_encounters(df: pd.DataFrame, column_map: dict) -> pd.DataFrame:
             df[col] = pd.to_datetime(df[col], errors='coerce')
     return df
 
-# ----------------------------------------
-# Create dim_patients Table
-# ----------------------------------------
+
 def create_dim_patients(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy().reset_index(drop=True)
     if 'patient_sk' not in df.columns:
@@ -81,9 +67,7 @@ def create_dim_patients(df: pd.DataFrame) -> pd.DataFrame:
     })[['patient_sk', 'patient_id', 'first_name', 'last_name',
         'middle_name', 'phone_number', 'gender', 'dob', 'age']]
 
-# ----------------------------------------
-# Create dim_providers Table
-# ----------------------------------------
+
 def create_dim_providers(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy().reset_index(drop=True)
     if 'provider_sk' not in df.columns:
@@ -97,9 +81,7 @@ def create_dim_providers(df: pd.DataFrame) -> pd.DataFrame:
         'NPI': 'npi'
     })[['provider_sk', 'provider_id', 'full_name', 'specialization', 'dept_id', 'npi']]
 
-# ----------------------------------------
-# Create dim_departments Table
-# ----------------------------------------
+
 def create_dim_departments(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy().reset_index(drop=True)
     if 'department_sk' not in df.columns:
@@ -110,9 +92,7 @@ def create_dim_departments(df: pd.DataFrame) -> pd.DataFrame:
         'Name': 'dept_name'
     })[['department_sk', 'dept_id', 'dept_name']]
 
-# ----------------------------------------
-# Create dim_encounters Table
-# ----------------------------------------
+
 def create_dim_encounters(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy().reset_index(drop=True)
     if 'encounter_sk' not in df.columns:
@@ -132,13 +112,11 @@ def create_dim_encounters(df: pd.DataFrame) -> pd.DataFrame:
         'dept_id', 'encounter_type', 'encounter_date',
         'procedure_code', 'insert_date', 'modified_date']]
 
-# ----------------------------------------
-# Create dim_transactions Table
-# ----------------------------------------
+
 def create_dim_transactions(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy().reset_index(drop=True)
 
-    # Assign surrogate key
+    
     if 'transaction_sk' not in df.columns:
         df.insert(0, 'transaction_sk', df.index + 1)
 
@@ -166,46 +144,39 @@ def create_dim_transactions(df: pd.DataFrame) -> pd.DataFrame:
         'ModifiedDate': 'modified_date'
     })
 
-    # Optional: reorder columns
+    
     columns = ['transaction_sk', 'transaction_id', 'encounter_id', 'patient_id', 'provider_id',
                'dept_id', 'visit_date', 'service_date', 'paid_date', 'visit_type', 'amount',
                'amount_type', 'paid_amount', 'claim_id', 'payor_id', 'procedure_code', 'icd_code',
                'line_of_business', 'medicaid_id', 'medicare_id', 'insert_date', 'modified_date']
 
-    # Return only the columns that exist in the DataFrame (in case some are missing)
+    
     return df[[col for col in columns if col in df.columns]]
 import pandas as pd
 import re
 from datetime import datetime
 
-# Existing functions ...
 
-# ----------------------------------------
-# Clean Claims Data (Hospital 1 & 2)
-# ----------------------------------------
-#def clean_claims(df: pd.DataFrame) -> pd.DataFrame:
 def clean_claims(df: pd.DataFrame, column_map: dict) -> pd.DataFrame:
     df = df.rename(columns=column_map)
-    # Standardize date columns
+    
     date_cols = ['ServiceDate', 'ClaimDate', 'InsertDate', 'ModifiedDate']
     for col in date_cols:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors='coerce')
     
-    # Standardize numeric fields
+    
     for col in ['ClaimAmount', 'PaidAmount', 'Deductible', 'Coinsurance', 'Copay']:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce')
     
     return df
 
-# ----------------------------------------
-# Create fact_claims Table
-# ----------------------------------------
+
 def create_fact_claims(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy().reset_index(drop=True)
 
-    # Insert surrogate key if not already present
+    
     if 'claim_sk' not in df.columns:
         df.insert(0, 'claim_sk', df.index + 1)
 
@@ -236,9 +207,7 @@ def create_fact_claims(df: pd.DataFrame) -> pd.DataFrame:
                'payor_type', 'deductible', 'coinsurance', 'copay',
                'insert_date', 'modified_date']]
 
-# ----------------------------------------
-# Clean Procedure Codes (CPT Code File)
-# ----------------------------------------
+
 def clean_procedure_codes(df: pd.DataFrame) -> pd.DataFrame:
     df = df.rename(columns={
         'Procedure Code Category': 'category',
@@ -246,13 +215,11 @@ def clean_procedure_codes(df: pd.DataFrame) -> pd.DataFrame:
         'Procedure Code Descriptions': 'description',
         'Code Status': 'status'
     })
-    df = df.dropna(subset=['cpt_code'])  # remove rows without CPT code
+    df = df.dropna(subset=['cpt_code'])  
     df['cpt_code'] = df['cpt_code'].astype(str).str.strip()
     return df
 
-# ----------------------------------------
-# Create dim_procedures Table
-# ----------------------------------------
+
 def create_dim_procedures(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy().reset_index(drop=True)
     df.insert(0, 'procedure_sk', df.index + 1)

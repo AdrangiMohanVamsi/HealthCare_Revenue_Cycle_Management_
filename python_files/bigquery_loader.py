@@ -2,17 +2,13 @@ import pandas as pd
 from google.cloud import bigquery
 import os
 
-# ------------------------------
-# Step 1: Setup GCP Credentials
-# ------------------------------
+
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "./h-gcp-key.json"
 project_id = "health-rcm"
 dataset_id = "silver"
 client = bigquery.Client(project=project_id)
 
-# ------------------------------
-# Function: Load to BigQuery
-# ------------------------------
+
 def load_to_bigquery(df, table_name, schema=None):
     table_id = f"{project_id}.{dataset_id}.{table_name}"
     job_config = bigquery.LoadJobConfig(schema=schema) if schema else None
@@ -20,9 +16,7 @@ def load_to_bigquery(df, table_name, schema=None):
     job.result()
     print(f"✅ {table_name} uploaded to BigQuery.")
 
-# ---------------------------------
-# Load Dimension Tables (CSV Files)
-# ---------------------------------
+
 dim_tables = {
     "dim_patients": "combined_cleaned_patients.csv",
     "dim_providers": "combined_cleaned_providers.csv",
@@ -35,12 +29,10 @@ for table_name, file_path in dim_tables.items():
     df = pd.read_csv(file_path)
     load_to_bigquery(df, table_name)
 
-# ---------------------------------
-# Load Fact Claims Table
-# ---------------------------------
+
 claims_df = pd.read_csv("combined_cleaned_claims.csv")
 
-# Convert date columns
+
 date_columns = ["service_date", "claim_date", "insert_date", "modified_date"]
 for col in date_columns:
     if col in claims_df.columns:
@@ -69,23 +61,19 @@ claims_schema = [
 
 load_to_bigquery(claims_df, "fact_claims", claims_schema)
 
-# ---------------------------------
-# Load CPT Code Data (dim_procedures)
-# ---------------------------------
 
 cpt_df = pd.read_csv("combined_cleaned_procedures.csv")
 
-# Rename to match schema
+
 cpt_df = cpt_df.rename(columns={
     "description": "procedure_description",
     "category": "procedure_code_category",
     "status": "code_status"
 })
 
-# Keep all relevant columns including surrogate key
+
 cpt_df = cpt_df[["procedure_sk", "cpt_code", "procedure_description", "procedure_code_category", "code_status"]]
 
-# Schema including surrogate key
 cpt_schema = [
     bigquery.SchemaField("procedure_sk", "INTEGER"),
     bigquery.SchemaField("cpt_code", "STRING"),
@@ -94,11 +82,10 @@ cpt_schema = [
     bigquery.SchemaField("code_status", "STRING")
 ]
 
-# Upload
-# Load SCD2 Data
+
 scd_df = pd.read_csv("scd_type2_patients.csv")
 
-# Convert date columns (if applicable)
+
 for col in ['effective_date', 'expiry_date']:
     if col in scd_df.columns:
         scd_df[col] = pd.to_datetime(scd_df[col], errors='coerce')

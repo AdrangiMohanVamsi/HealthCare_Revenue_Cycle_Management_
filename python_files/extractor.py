@@ -17,7 +17,7 @@ class DataExtractor:
         query = f"SELECT * FROM {table_name}"
         return pd.read_sql(query, self.conn)
 
-# Example usage
+
 if __name__ == "__main__":
     from pprint import pprint
 

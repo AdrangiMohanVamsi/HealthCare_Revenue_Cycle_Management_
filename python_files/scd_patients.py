@@ -2,9 +2,7 @@ import pandas as pd
 import os
 from datetime import datetime
 
-# -----------------------------
-# Load new and historical data
-# -----------------------------
+
 new_df = pd.read_csv("combined_cleaned_patients.csv")
 new_df['effective_date'] = pd.to_datetime(datetime.today().date())
 new_df['expiry_date'] = pd.NaT
@@ -31,33 +29,29 @@ if os.path.exists(scd_file):
                     break
 
             if changes:
-                # Expire the old record
+                
                 old_df.loc[existing.index, 'expiry_date'] = new_row['effective_date']
                 old_df.loc[existing.index, 'is_current'] = False
 
-                # Add the new version
+                
                 new_row['version'] = existing_row['version'] + 1
                 final_scd.append(new_row)
             else:
-                # No changes, keep the old row
+                
                 continue
 
     updated_df = pd.concat([old_df, pd.DataFrame(final_scd)], ignore_index=True)
 else:
     updated_df = new_df
 
-# -----------------------------
-# Save final SCD table
-# -----------------------------
-#updated_df = updated_df.sort_values(by=['patient_id', 'version'])
-#updated_df.insert(0, 'patient_sk', range(1, len(updated_df)+1))
+
 updated_df = updated_df.sort_values(by=['patient_id', 'version'])
 
-# Drop old patient_sk if already exists
+
 if 'patient_sk' in updated_df.columns:
     updated_df = updated_df.drop(columns=['patient_sk'])
 
-# Recreate patient_sk
+
 updated_df.insert(0, 'patient_sk', range(1, len(updated_df)+1))
 
 updated_df.to_csv(scd_file, index=False)

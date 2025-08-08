@@ -13,7 +13,7 @@ def apply_scd_type2(existing_df, new_df):
         existing_rows = existing_df[existing_df['patient_id'] == pid]
 
         if existing_rows.empty:
-            # New patient
+            
             new_entry = new_row.to_dict()
             new_entry.update({
                 'effective_date': current_date,
@@ -23,16 +23,16 @@ def apply_scd_type2(existing_df, new_df):
             })
             output_df = pd.concat([output_df, pd.DataFrame([new_entry])], ignore_index=True)
         else:
-            # Check for changes
+            
             current_record = existing_rows[existing_rows['is_current'] == True].iloc[0]
             has_changed = any(new_row[col] != current_record[col] for col in scd_cols)
 
             if has_changed:
-                # Close existing record
+                
                 output_df.loc[(output_df['patient_id'] == pid) & (output_df['is_current']), 'expiry_date'] = current_date
                 output_df.loc[(output_df['patient_id'] == pid) & (output_df['is_current']), 'is_current'] = False
 
-                # Add new version
+                
                 new_entry = new_row.to_dict()
                 new_entry.update({
                     'effective_date': current_date,
@@ -44,23 +44,20 @@ def apply_scd_type2(existing_df, new_df):
 
     return output_df
 
-# -------------------------------
-# Main SCD2 Execution Block
-# -------------------------------
 
-# Load latest patient data
+
 new_df = pd.read_csv("combined_cleaned_patients.csv")
 
-# Try to load existing SCD2 data
+
 if os.path.exists("scd_type2_patients.csv"):
     existing_df = pd.read_csv("scd_type2_patients.csv", parse_dates=['effective_date', 'expiry_date'])
 else:
-    # First run: empty DataFrame with required columns
+    
     existing_df = pd.DataFrame(columns=new_df.columns.tolist() + ['effective_date', 'expiry_date', 'is_current', 'version'])
 
-# Apply SCD Type 2 logic
+
 final_scd_df = apply_scd_type2(existing_df, new_df)
 
-# Save updated SCD2 dataset
+
 final_scd_df.to_csv("scd_type2_patients.csv", index=False)
 print("✅ scd_type2_patients.csv generated successfully.")

@@ -9,7 +9,7 @@ from transformer import (
     create_dim_departments,create_dim_encounters,create_dim_transactions
 )
 
-# 1. DB Connection
+
 mysql_config = db_config['hospital_a']
 encoded_password = urllib.parse.quote_plus(mysql_config['password'])
 
@@ -17,7 +17,7 @@ engine = create_engine(
     f"mysql+mysqlconnector://{mysql_config['user']}:{encoded_password}@{mysql_config['host']}/{mysql_config['database']}"
 )
 
-# 2. Load and Clean Patient Data
+
 patients_a = pd.read_csv("hospital-a/patients.csv")
 patients_b = pd.read_csv("hospital-b/patients.csv")
 
@@ -40,7 +40,7 @@ dim_patients_df.to_csv("combined_cleaned_patients.csv", index=False)
 dim_patients_df.to_sql('dim_patients', con=engine, if_exists='replace', index=False)
 print("✅ dim_patients loaded.")
 
-# 3. Load and Clean Provider Data
+
 providers_a = pd.read_csv("hospital-a/providers.csv")
 providers_b = pd.read_csv("hospital-b/providers.csv")
 
@@ -57,7 +57,7 @@ dim_providers_df.to_csv("combined_cleaned_providers.csv", index=False)
 dim_providers_df.to_sql('dim_providers', con=engine, if_exists='replace', index=False)
 print("✅ dim_providers loaded.")
 
-# 4. Load and Clean Transactions
+
 transactions_a = pd.read_csv("hospital-a/transactions.csv")
 transactions_b = pd.read_csv("hospital-b/transactions.csv")
 
@@ -109,16 +109,3 @@ dim_encounters_df = create_dim_encounters(combined_encounters)
 dim_encounters_df.to_csv("combined_cleaned_encounters.csv", index=False)
 dim_encounters_df.to_sql('dim_encounters', con=engine, if_exists='replace', index=False)
 print("✅ dim_encounters loaded.")
-'''
-# 5. Create fact_encounters and dim_diagnosis
-fact_encounters_df = create_fact_encounters(combined_transactions)
-fact_encounters_df.to_sql('fact_encounters', con=engine, if_exists='replace', index=False)
-print("✅ fact_encounters loaded.")
-
-dim_diagnosis_df = create_dim_diagnosis(combined_transactions)
-dim_diagnosis_df.to_sql('dim_diagnosis', con=engine, if_exists='replace', index=False)
-print("✅ dim_diagnosis loaded.")
-# Save for BigQuery loading
-fact_encounters_df.to_csv("combined_cleaned_encounters.csv", index=False)
-dim_diagnosis_df.to_csv("combined_cleaned_diagnosis.csv", index=False)  # Optional safety
-'''
